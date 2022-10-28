@@ -239,8 +239,10 @@ func ExecuteSetWidth(c Command, v *VHS) {
 	v.Options.Video.Width, _ = strconv.Atoi(c.Args)
 }
 
-const bitSize = 64
-const base = 10
+const (
+	bitSize = 64
+	base    = 10
+)
 
 // ExecuteSetLetterSpacing applies letter spacing (also known as tracking) on the
 // vhs.
@@ -259,13 +261,22 @@ func ExecuteSetLineHeight(c Command, v *VHS) {
 
 // ExecuteSetTheme applies the theme on the vhs.
 func ExecuteSetTheme(c Command, v *VHS) {
-	err := json.Unmarshal([]byte(c.Args), &v.Options.Theme)
-	if err != nil {
-		fmt.Println(err)
-		v.Options.Theme = DefaultTheme
-		return
+	if strings.HasPrefix(strings.TrimSpace(c.Args), "{") {
+		if err := json.Unmarshal([]byte(c.Args), &v.Options.Theme); err != nil {
+			fmt.Println("invalid Set Theme JSON:", err)
+			v.Options.Theme = DefaultTheme
+			return
+		}
+	} else {
+		if theme, ok := Themes()[c.Args]; ok {
+			v.Options.Theme = theme
+		} else {
+			v.Options.Theme = DefaultTheme
+			return
+		}
 	}
-	_, _ = v.Page.Eval(fmt.Sprintf("() => term.options.theme = %s", c.Args))
+	theme, _ := json.Marshal(v.Options.Theme)
+	_, _ = v.Page.Eval(fmt.Sprintf("() => term.options.theme = %s", string(theme)))
 	v.Options.Video.BackgroundColor = v.Options.Theme.Background
 }
 
