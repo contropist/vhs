@@ -268,7 +268,7 @@ func ExecuteSetTheme(c Command, v *VHS) {
 			return
 		}
 	} else {
-		if theme, ok := Themes()[c.Args]; ok {
+		if theme, ok := Themes[c.Args]; ok {
 			v.Options.Theme = theme
 		} else {
 			v.Options.Theme = DefaultTheme

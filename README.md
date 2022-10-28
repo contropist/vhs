@@ -300,7 +300,7 @@ You can also set some themes by their name:
 - `Set Theme Catppuccin-Latte`
 - `Set Theme Catppuccin-Macchiato`
 - `Set Theme Catppuccin-Mocha`
-- `Set Theme TokyoNight`
+- `Set Theme TokyoNight-Storm`
 
 #### Set Padding
 
