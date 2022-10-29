@@ -261,22 +261,14 @@ func ExecuteSetLineHeight(c Command, v *VHS) {
 
 // ExecuteSetTheme applies the theme on the vhs.
 func ExecuteSetTheme(c Command, v *VHS) {
-	if strings.HasPrefix(strings.TrimSpace(c.Args), "{") {
-		if err := json.Unmarshal([]byte(c.Args), &v.Options.Theme); err != nil {
-			fmt.Println("invalid Set Theme JSON:", err)
-			v.Options.Theme = DefaultTheme
-			return
-		}
-	} else {
-		if theme, ok := Themes[c.Args]; ok {
-			v.Options.Theme = theme
-		} else {
-			v.Options.Theme = DefaultTheme
-			return
-		}
+	var err error
+	v.Options.Theme, err = getTheme(c.Args)
+	if err != nil {
+		fmt.Println(err)
 	}
-	theme, _ := json.Marshal(v.Options.Theme)
-	_, _ = v.Page.Eval(fmt.Sprintf("() => term.options.theme = %s", string(theme)))
+
+	bts, _ := json.Marshal(v.Options.Theme)
+	_, _ = v.Page.Eval(fmt.Sprintf("() => term.options.theme = %s", string(bts)))
 	v.Options.Video.BackgroundColor = v.Options.Theme.Background
 }
 
@@ -311,4 +303,29 @@ func ExecuteSetPlaybackSpeed(c Command, v *VHS) {
 		return
 	}
 	v.Options.Video.PlaybackSpeed = playbackSpeed
+}
+
+func getTheme(s string) (Theme, error) {
+	switch s[0] {
+	case '{':
+		return getJSONTheme(s)
+	default:
+		return getNamedTheme(s)
+	}
+}
+
+func getNamedTheme(s string) (Theme, error) {
+	theme, ok := Themes[s]
+	if !ok {
+		return DefaultTheme, fmt.Errorf("invalid `Set Theme %q`: theme does not exist", s)
+	}
+	return theme, nil
+}
+
+func getJSONTheme(s string) (Theme, error) {
+	var t Theme
+	if err := json.Unmarshal([]byte(s), &t); err != nil {
+		return DefaultTheme, fmt.Errorf("invalid `Set Theme %q: %w`", s, err)
+	}
+	return t, nil
 }
