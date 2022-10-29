@@ -1,7 +1,7 @@
 Output examples/settings/theme-name.gif
 Set FontSize 42
 Set Height 225
-Set Theme Catppuccin-Latte
+Set Theme "3024 Day"
 
 Type "I can't make up my mind."
 Sleep 1

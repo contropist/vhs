@@ -315,7 +315,7 @@ func getTheme(s string) (Theme, error) {
 }
 
 func getNamedTheme(s string) (Theme, error) {
-	theme, ok := Themes[s]
+	theme, ok := Themes()[s]
 	if !ok {
 		return DefaultTheme, fmt.Errorf("invalid `Set Theme %q`: theme does not exist", s)
 	}

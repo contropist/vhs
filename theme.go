@@ -19,27 +19,28 @@ import (
 // valid go struct.
 // https://xtermjs.org/docs/api/terminal/interfaces/itheme/
 type Theme struct {
-	Background    string `json:"background"`
-	Foreground    string `json:"foreground"`
-	Selection     string `json:"selection"`
-	Cursor        string `json:"cursor"`
-	CursorAccent  string `json:"cursorAccent"`
-	Black         string `json:"black"`
-	BrightBlack   string `json:"brightBlack"`
-	Red           string `json:"red"`
-	BrightRed     string `json:"brightRed"`
-	Green         string `json:"green"`
-	BrightGreen   string `json:"brightGreen"`
-	Yellow        string `json:"yellow"`
-	BrightYellow  string `json:"brightYellow"`
-	Blue          string `json:"blue"`
-	BrightBlue    string `json:"brightBlue"`
-	Magenta       string `json:"magenta"`
-	BrightMagenta string `json:"brightMagenta"`
-	Cyan          string `json:"cyan"`
-	BrightCyan    string `json:"brightCyan"`
-	White         string `json:"white"`
-	BrightWhite   string `json:"brightWhite"`
+	Name         string `json:"name"`
+	Background   string `json:"background"`
+	Foreground   string `json:"foreground"`
+	Selection    string `json:"selection"`
+	Cursor       string `json:"cursor"`
+	CursorAccent string `json:"cursorAccent"`
+	Black        string `json:"black"`
+	BrightBlack  string `json:"brightBlack"`
+	Red          string `json:"red"`
+	BrightRed    string `json:"brightRed"`
+	Green        string `json:"green"`
+	BrightGreen  string `json:"brightGreen"`
+	Yellow       string `json:"yellow"`
+	BrightYellow string `json:"brightYellow"`
+	Blue         string `json:"blue"`
+	BrightBlue   string `json:"brightBlue"`
+	Purple       string `json:"purple"`
+	BrightPurple string `json:"brightPurple"`
+	Cyan         string `json:"cyan"`
+	BrightCyan   string `json:"brightCyan"`
+	White        string `json:"white"`
+	BrightWhite  string `json:"brightWhite"`
 }
 
 func (t Theme) String() string {
@@ -56,26 +57,26 @@ func (t Theme) String() string {
 //
 // Taken from https://github.com/meowgorithm/dotfiles.
 var DefaultTheme = Theme{
-	Background:    Background,
-	Foreground:    Foreground,
-	Cursor:        Foreground,
-	CursorAccent:  Background,
-	Black:         Black,
-	BrightBlack:   BrightBlack,
-	Red:           Red,
-	BrightRed:     BrightRed,
-	Green:         Green,
-	BrightGreen:   BrightGreen,
-	Yellow:        Yellow,
-	BrightYellow:  BrightYellow,
-	Blue:          Blue,
-	BrightBlue:    BrightBlue,
-	Magenta:       Magenta,
-	BrightMagenta: BrightMagenta,
-	Cyan:          Cyan,
-	BrightCyan:    BrightCyan,
-	White:         White,
-	BrightWhite:   BrightWhite,
+	Background:   Background,
+	Foreground:   Foreground,
+	Cursor:       Foreground,
+	CursorAccent: Background,
+	Black:        Black,
+	BrightBlack:  BrightBlack,
+	Red:          Red,
+	BrightRed:    BrightRed,
+	Green:        Green,
+	BrightGreen:  BrightGreen,
+	Yellow:       Yellow,
+	BrightYellow: BrightYellow,
+	Blue:         Blue,
+	BrightBlue:   BrightBlue,
+	Purple:       Magenta,
+	BrightPurple: BrightMagenta,
+	Cyan:         Cyan,
+	BrightCyan:   BrightCyan,
+	White:        White,
+	BrightWhite:  BrightWhite,
 }
 
 const margin = 2
