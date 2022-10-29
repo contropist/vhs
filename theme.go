@@ -22,8 +22,8 @@ type Theme struct {
 	Name         string `json:"name"`
 	Background   string `json:"background"`
 	Foreground   string `json:"foreground"`
-	Selection    string `json:"selection"`
-	Cursor       string `json:"cursor"`
+	Selection    string `json:"selectionBackground"`
+	Cursor       string `json:"cursorColor"`
 	CursorAccent string `json:"cursorAccent"`
 	Black        string `json:"black"`
 	BrightBlack  string `json:"brightBlack"`
