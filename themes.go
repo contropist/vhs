@@ -8,16 +8,15 @@ import (
 	"sync"
 )
 
-//go:embed themes.json
-var themesBts []byte
-
 var (
+	//go:embed themes.json
+	themesBts  []byte
 	themesOnce sync.Once
 	themesMap  = map[string]Theme{}
 )
 
 // Themes return the list of themes.
-var Themes = func() map[string]Theme {
+func Themes() map[string]Theme {
 	themesOnce.Do(func() {
 		var themes []windowsTerminalTheme
 		if err := json.Unmarshal(themesBts, &themes); err != nil {
@@ -28,8 +27,8 @@ var Themes = func() map[string]Theme {
 			themesMap[theme.Name] = Theme{
 				Background:    theme.Background,
 				Foreground:    theme.Foreground,
-				Selection:     theme.Selection,
-				Cursor:        theme.Cursor,
+				Selection:     theme.SelectionBackground,
+				Cursor:        theme.CursorColor,
 				CursorAccent:  theme.CursorAccent,
 				Black:         theme.Black,
 				BrightBlack:   theme.BrightBlack,
@@ -54,26 +53,26 @@ var Themes = func() map[string]Theme {
 }
 
 type windowsTerminalTheme struct {
-	Name         string `json:"name"`
-	Background   string `json:"background"`
-	Foreground   string `json:"foreground"`
-	Selection    string `json:"selectionBackground"`
-	Cursor       string `json:"cursorColor"`
-	CursorAccent string `json:"cursorAccent"`
-	Black        string `json:"black"`
-	BrightBlack  string `json:"brightBlack"`
-	Red          string `json:"red"`
-	BrightRed    string `json:"brightRed"`
-	Green        string `json:"green"`
-	BrightGreen  string `json:"brightGreen"`
-	Yellow       string `json:"yellow"`
-	BrightYellow string `json:"brightYellow"`
-	Blue         string `json:"blue"`
-	BrightBlue   string `json:"brightBlue"`
-	Purple       string `json:"purple"`
-	BrightPurple string `json:"brightPurple"`
-	Cyan         string `json:"cyan"`
-	BrightCyan   string `json:"brightCyan"`
-	White        string `json:"white"`
-	BrightWhite  string `json:"brightWhite"`
+	Name                string `json:"name"`
+	Background          string `json:"background"`
+	Foreground          string `json:"foreground"`
+	SelectionBackground string `json:"selectionBackground"`
+	CursorColor         string `json:"cursorColor"`
+	CursorAccent        string `json:"cursorAccent"`
+	Black               string `json:"black"`
+	BrightBlack         string `json:"brightBlack"`
+	Red                 string `json:"red"`
+	BrightRed           string `json:"brightRed"`
+	Green               string `json:"green"`
+	BrightGreen         string `json:"brightGreen"`
+	Yellow              string `json:"yellow"`
+	BrightYellow        string `json:"brightYellow"`
+	Blue                string `json:"blue"`
+	BrightBlue          string `json:"brightBlue"`
+	Purple              string `json:"purple"`
+	BrightPurple        string `json:"brightPurple"`
+	Cyan                string `json:"cyan"`
+	BrightCyan          string `json:"brightCyan"`
+	White               string `json:"white"`
+	BrightWhite         string `json:"brightWhite"`
 }

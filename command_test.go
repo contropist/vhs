@@ -34,12 +34,12 @@ func TestExecuteSetTheme(t *testing.T) {
 			Options: &Options{},
 			Page:    p,
 		}
-		theme := "Catppuccin-Frappe"
+		theme := "Andromeda"
 		ExecuteSetTheme(Command{
 			Type: "Theme",
 			Args: theme,
 		}, v)
-		if !reflect.DeepEqual(Themes[theme], v.Options.Theme) {
+		if !reflect.DeepEqual(Themes()[theme], v.Options.Theme) {
 			t.Errorf("expected theme to be %s, got something else: %+v", theme, v.Options.Theme)
 		}
 	})
