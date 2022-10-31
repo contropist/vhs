@@ -1,5 +1,4 @@
 //go:generate sh sync-themes.sh
-//go:generate go run . themes --markdown THEMES.md
 package main
 
 import (

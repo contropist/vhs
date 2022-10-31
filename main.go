@@ -67,30 +67,24 @@ var (
 		},
 	}
 
-	md        string
+	md        bool
 	themesCmd = &cobra.Command{
 		Use:   "themes",
 		Short: "List all the available themes, one per line",
 		Args:  cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if md == "" {
+		Run: func(cmd *cobra.Command, args []string) {
+			if !md {
 				for _, theme := range sortedThemeNames() {
 					fmt.Fprintln(cmd.OutOrStdout(), theme)
 				}
-				return nil
+				return
 			}
 
-			f, err := os.OpenFile(md, os.O_TRUNC|os.O_RDWR|os.O_CREATE, 0o644)
-			if err != nil {
-				return err
-			}
-			defer f.Close()
-			fmt.Fprintln(f, "# Themes")
-			fmt.Fprintln(f)
+			fmt.Fprintln(cmd.OutOrStdout(), "# Themes")
+			fmt.Fprintln(cmd.OutOrStdout())
 			for _, theme := range sortedThemeNames() {
-				fmt.Fprintf(f, "* `%s`\n", theme)
+				fmt.Fprintf(cmd.OutOrStdout(), "* `%s`\n", theme)
 			}
-			return f.Close()
 		},
 	}
 
@@ -168,7 +162,7 @@ func main() {
 }
 
 func init() {
-	themesCmd.Flags().StringVar(&md, "markdown", "", "output path as markdown")
+	themesCmd.Flags().BoolVar(&md, "markdown", false, "output as markdown")
 	themesCmd.Flags().MarkHidden("markdown")
 	rootCmd.AddCommand(
 		newCmd,
