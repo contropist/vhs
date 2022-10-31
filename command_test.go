@@ -8,7 +8,7 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 )
 
-const numberOfCommands = 17
+const numberOfCommands = 18
 
 func TestCommand(t *testing.T) {
 	if len(CommandTypes) != numberOfCommands {
