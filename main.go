@@ -67,16 +67,16 @@ var (
 		},
 	}
 
-	md        bool
+	markdown  bool
 	themesCmd = &cobra.Command{
 		Use:   "themes",
 		Short: "List all the available themes, one per line",
 		Args:  cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-            var prefix, suffix string
+			var prefix, suffix string
 			if markdown {
-			    fmt.Fprintln(cmd.OutOrStdout(), "# Themes\n")
-			    prefix, suffix = "* `", "`"
+				fmt.Fprintf(cmd.OutOrStdout(), "# Themes\n\n")
+				prefix, suffix = "* `", "`"
 			}
 			for _, theme := range sortedThemeNames() {
 				fmt.Fprintf(cmd.OutOrStdout(), "%s%s%s\n", prefix, theme, suffix)
@@ -158,7 +158,7 @@ func main() {
 }
 
 func init() {
-	themesCmd.Flags().BoolVar(&md, "markdown", false, "output as markdown")
+	themesCmd.Flags().BoolVar(&markdown, "markdown", false, "output as markdown")
 	_ = themesCmd.Flags().MarkHidden("markdown")
 	rootCmd.AddCommand(
 		newCmd,

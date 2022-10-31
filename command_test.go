@@ -3,9 +3,6 @@ package main
 import (
 	"reflect"
 	"testing"
-
-	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/proto"
 )
 
 func TestCommand(t *testing.T) {
@@ -20,83 +17,60 @@ func TestCommand(t *testing.T) {
 }
 
 func TestExecuteSetTheme(t *testing.T) {
-	browser := rod.New().MustConnect()
-	t.Cleanup(func() {
-		browser.MustClose()
-	})
-	p, err := browser.Page(proto.TargetCreateTarget{})
-	if err != nil {
-		t.Skip("could not start a browser:", err)
-	}
-
 	t.Run("empty", func(t *testing.T) {
-		v := &VHS{
-			Options: &Options{},
-			Page:    p,
-		}
-		ExecuteSetTheme(Command{
-			Type: "Theme",
-			Args: "  ",
-		}, v)
-		if !reflect.DeepEqual(DefaultTheme, v.Options.Theme) {
-			t.Errorf("expected theme to be the default theme, got something else: %+v", v.Options.Theme)
-		}
+		theme, err := getTheme("  ")
+		requireNoErr(t, err)
+		requireDefaultTheme(t, theme)
 	})
 	t.Run("named", func(t *testing.T) {
-		v := &VHS{
-			Options: &Options{},
-			Page:    p,
-		}
-		theme := "Andromeda"
-		ExecuteSetTheme(Command{
-			Type: "Theme",
-			Args: theme,
-		}, v)
-		expect, _ := findTheme(theme)
-		if !reflect.DeepEqual(expect, v.Options.Theme) {
-			t.Errorf("expected theme to be %s, got something else: %+v", theme, v.Options.Theme)
-		}
+		theme, err := getTheme("Andromeda")
+		requireNoErr(t, err)
+		requireNotDefaultTheme(t, theme)
 	})
 	t.Run("json", func(t *testing.T) {
-		v := &VHS{
-			Options: &Options{},
-			Page:    p,
-		}
-		theme := `{"background": "#29283b"}`
-		ExecuteSetTheme(Command{
-			Type: "Theme",
-			Args: theme,
-		}, v)
-		if !reflect.DeepEqual("#29283b", v.Options.Theme.Background) {
-			t.Errorf("expected theme to be %s, got something else: %+v", theme, v.Options.Theme)
+		theme, err := getTheme(`{"background": "#29283b"}`)
+		requireNoErr(t, err)
+		requireNotDefaultTheme(t, theme)
+		if "#29283b" != theme.Background {
+			t.Errorf("wrong background, expected %q, got %q", "#29283b", theme.Background)
 		}
 	})
 	t.Run("invalid json", func(t *testing.T) {
-		v := &VHS{
-			Options: &Options{},
-			Page:    p,
-		}
-		theme := `{"backgroun`
-		ExecuteSetTheme(Command{
-			Type: "Theme",
-			Args: theme,
-		}, v)
-		if !reflect.DeepEqual(DefaultTheme, v.Options.Theme) {
-			t.Errorf("expected theme to be %s, got something else: %+v", DefaultTheme, v.Options.Theme)
-		}
+		theme, err := getTheme(`{"background`)
+		requireErr(t, err)
+		requireDefaultTheme(t, theme)
 	})
 	t.Run("unknown theme", func(t *testing.T) {
-		v := &VHS{
-			Options: &Options{},
-			Page:    p,
-		}
-		theme := `foobar`
-		ExecuteSetTheme(Command{
-			Type: "Theme",
-			Args: theme,
-		}, v)
-		if !reflect.DeepEqual(DefaultTheme, v.Options.Theme) {
-			t.Errorf("expected theme to be %s, got something else: %+v", DefaultTheme, v.Options.Theme)
-		}
+		theme, err := getTheme("foobar")
+		requireErr(t, err)
+		requireDefaultTheme(t, theme)
 	})
+}
+
+func requireErr(tb testing.TB, err error) {
+	tb.Helper()
+	if err == nil {
+		tb.Fatalf("expected an error, got nil")
+	}
+}
+
+func requireNoErr(tb testing.TB, err error) {
+	tb.Helper()
+	if err != nil {
+		tb.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func requireDefaultTheme(tb testing.TB, theme Theme) {
+	tb.Helper()
+	if !reflect.DeepEqual(DefaultTheme, theme) {
+		tb.Fatalf("expected theme to be the default theme, got something else: %+v", theme)
+	}
+}
+
+func requireNotDefaultTheme(tb testing.TB, theme Theme) {
+	tb.Helper()
+	if reflect.DeepEqual(DefaultTheme, theme) {
+		tb.Fatalf("expected theme to be different from the default theme, got the default instead")
+	}
 }
