@@ -2,12 +2,10 @@ package main
 
 import "testing"
 
-func TestThemesTest(t *testing.T) {
-	for i := 0; i < 5; i++ {
-		themes := Themes()
-		expect := 281
-		if l := len(themes); l != expect {
-			t.Errorf("expected to load %d themes, got %d", expect, l)
-		}
+func TestFindAllThemes(t *testing.T) {
+	themes := sortedThemeNames()
+	expect := 295
+	if l := len(themes); l != expect {
+		t.Errorf("expected to load %d themes, got %d", expect, l)
 	}
 }

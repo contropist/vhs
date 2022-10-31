@@ -8,9 +8,8 @@ import (
 	"github.com/go-rod/rod/lib/proto"
 )
 
-const numberOfCommands = 18
-
 func TestCommand(t *testing.T) {
+	const numberOfCommands = 18
 	if len(CommandTypes) != numberOfCommands {
 		t.Errorf("Expected %d commands, got %d", numberOfCommands, len(CommandTypes))
 	}
@@ -27,8 +26,9 @@ func TestExecuteSetTheme(t *testing.T) {
 	})
 	p, err := browser.Page(proto.TargetCreateTarget{})
 	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
+		t.Skip("could not start a browser:", err)
 	}
+
 	t.Run("empty", func(t *testing.T) {
 		v := &VHS{
 			Options: &Options{},
@@ -52,7 +52,8 @@ func TestExecuteSetTheme(t *testing.T) {
 			Type: "Theme",
 			Args: theme,
 		}, v)
-		if !reflect.DeepEqual(Themes()[theme], v.Options.Theme) {
+		expect, _ := findTheme(theme)
+		if !reflect.DeepEqual(expect, v.Options.Theme) {
 			t.Errorf("expected theme to be %s, got something else: %+v", theme, v.Options.Theme)
 		}
 	})

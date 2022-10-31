@@ -15,7 +15,7 @@ import (
 type CommandType TokenType
 
 // CommandTypes is a list of the available commands that can be executed.
-var CommandTypes = []CommandType{
+var CommandTypes = []CommandType{ //nolint: deadcode
 	BACKSPACE,
 	CTRL,
 	DOWN,
@@ -274,7 +274,8 @@ func ExecuteSetTheme(c Command, v *VHS) {
 	var err error
 	v.Options.Theme, err = getTheme(c.Args)
 	if err != nil {
-		fmt.Println(err)
+		v.Errors = append(v.Errors, err)
+		return
 	}
 
 	bts, _ := json.Marshal(v.Options.Theme)
@@ -327,7 +328,7 @@ func getTheme(s string) (Theme, error) {
 }
 
 func getNamedTheme(s string) (Theme, error) {
-	theme, ok := Themes()[s]
+	theme, ok := findTheme(s)
 	if !ok {
 		return DefaultTheme, fmt.Errorf("invalid `Set Theme %q`: theme does not exist", s)
 	}
