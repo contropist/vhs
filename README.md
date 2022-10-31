@@ -316,7 +316,7 @@ You can also set themes by name:
 Set Theme "Catppuccin Frappe"
 ```
 
-See the full list by running `vhs man`.
+See the full list by running `vhs themes`, or in [THEMES.md](./THEMES.md).
 
 #### Set Padding
 

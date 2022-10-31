@@ -66,16 +66,6 @@ The following is a list of all possible setting commands in VHS:
 	manAuthor = "Charm <vt100@charm.sh>"
 )
 
-func manThemes() string {
-	result := []string{
-		"Here's a list of all the themes you can use with %Set Theme%, one per line:\n",
-	}
-	for _, k := range SortedThemeNames() {
-		result = append(result, `* Set %Theme% "`+k+`"`)
-	}
-	return strings.Join(result, "\n") + "\n"
-}
-
 var manCmd = &cobra.Command{
 	Use:     "manual",
 	Aliases: []string{"man"},
@@ -107,7 +97,6 @@ var manCmd = &cobra.Command{
 			WithLongDescription(sanitizeSpecial(manDescription)).
 			WithSection("Output", sanitizeSpecial(manOutput)).
 			WithSection("Settings", sanitizeSpecial(manSettings)).
-			WithSection("Themes", sanitizeSpecial(manThemes())).
 			WithSection("Bugs", sanitizeSpecial(manBugs)).
 			WithSection("Author", sanitizeSpecial(manAuthor)).
 			WithSection("Copyright", "(C) 2021-2022 Charmbracelet, Inc.\n"+
@@ -123,7 +112,6 @@ func markdownManual() string {
 		"# MANUAL\n", sanitizeMarkdown(manDescription),
 		"# OUTPUT\n", sanitizeMarkdown(manOutput),
 		"# SETTING\n", sanitizeMarkdown(manSettings),
-		"## THEMES\n", sanitizeMarkdown(manThemes()),
 		"# BUGS\n", manBugs,
 		"\n# AUTHOR\n", manAuthor,
 	)

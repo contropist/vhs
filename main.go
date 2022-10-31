@@ -67,6 +67,33 @@ var (
 		},
 	}
 
+	md        string
+	themesCmd = &cobra.Command{
+		Use:   "themes",
+		Short: "List all the available themes, one per line",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if md == "" {
+				for _, theme := range sortedThemeNames() {
+					fmt.Fprintln(cmd.OutOrStdout(), theme)
+				}
+				return nil
+			}
+
+			f, err := os.OpenFile(md, os.O_TRUNC|os.O_RDWR|os.O_CREATE, 0o644)
+			if err != nil {
+				return err
+			}
+			defer f.Close()
+			fmt.Fprintln(f, "# Themes")
+			fmt.Fprintln(f)
+			for _, theme := range sortedThemeNames() {
+				fmt.Fprintf(f, "* `%s`\n", theme)
+			}
+			return f.Close()
+		},
+	}
+
 	newCmd = &cobra.Command{
 		Use:   "new <name>",
 		Short: "Create a new tape file with example tape file contents and documentation",
@@ -141,8 +168,11 @@ func main() {
 }
 
 func init() {
+	themesCmd.Flags().StringVar(&md, "markdown", "", "output path as markdown")
+	themesCmd.Flags().MarkHidden("markdown")
 	rootCmd.AddCommand(
 		newCmd,
+		themesCmd,
 		validateCmd,
 		manCmd,
 		serveCmd,

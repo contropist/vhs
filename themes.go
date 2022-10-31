@@ -1,4 +1,5 @@
 //go:generate sh sync-themes.sh
+//go:generate go run . themes --markdown THEMES.md
 package main
 
 import (
@@ -19,11 +20,10 @@ var (
 	customThemesBts []byte
 
 	themesOnce sync.Once
-	themesMap  = map[string]Theme{}
+	allThemes  = map[string]Theme{}
 )
 
-// SortedThemeNames returns just the theme names, sorted alphabetically.
-func SortedThemeNames() []string {
+func sortedThemeNames() []string {
 	keys := make([]string, 0, len(Themes()))
 	for k := range Themes() {
 		keys = append(keys, k)
@@ -44,7 +44,7 @@ func Themes() map[string]Theme {
 				os.Exit(1)
 			}
 			for _, theme := range themes {
-				themesMap[theme.Name] = Theme{
+				allThemes[theme.Name] = Theme{
 					Background:    theme.Background,
 					Foreground:    theme.Foreground,
 					Selection:     theme.SelectionBackground,
@@ -70,7 +70,7 @@ func Themes() map[string]Theme {
 			}
 		}
 	})
-	return themesMap
+	return allThemes
 }
 
 type windowsTerminalTheme struct {
