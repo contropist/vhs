@@ -19,6 +19,7 @@ import (
 // valid go struct.
 // https://xtermjs.org/docs/api/terminal/interfaces/itheme/
 type Theme struct {
+	Name          string `json:"name"`
 	Background    string `json:"background"`
 	Foreground    string `json:"foreground"`
 	Selection     string `json:"selection"`
