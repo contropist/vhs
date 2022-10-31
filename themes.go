@@ -1,3 +1,4 @@
+//go:generate sh sync-themes.sh
 package main
 
 import (
@@ -10,8 +11,6 @@ import (
 	"sync"
 )
 
-//go:generate wget -O themes.json https://raw.githubusercontent.com/atomcorp/themes/master/app/src/backupthemes.json
-//go:generate wget -O themes_custom.json https://raw.githubusercontent.com/atomcorp/themes/master/app/src/custom-colour-schemes.json
 var (
 	//go:embed themes.json
 	themesBts []byte
@@ -23,8 +22,9 @@ var (
 	themesMap  = map[string]Theme{}
 )
 
+// SortedThemeNames returns just the theme names, sorted alphabetically.
 func SortedThemeNames() []string {
-	var keys []string
+	keys := make([]string, 0, len(Themes()))
 	for k := range Themes() {
 		keys = append(keys, k)
 	}
