@@ -29,6 +29,19 @@ func TestExecuteSetTheme(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
+	t.Run("empty", func(t *testing.T) {
+		v := &VHS{
+			Options: &Options{},
+			Page:    p,
+		}
+		ExecuteSetTheme(Command{
+			Type: "Theme",
+			Args: "  ",
+		}, v)
+		if !reflect.DeepEqual(DefaultTheme, v.Options.Theme) {
+			t.Errorf("expected theme to be the default theme, got something else: %+v", v.Options.Theme)
+		}
+	})
 	t.Run("named", func(t *testing.T) {
 		v := &VHS{
 			Options: &Options{},

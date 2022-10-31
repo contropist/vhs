@@ -315,6 +315,9 @@ func ExecuteSetPlaybackSpeed(c Command, v *VHS) {
 }
 
 func getTheme(s string) (Theme, error) {
+	if strings.TrimSpace(s) == "" {
+		return DefaultTheme, nil
+	}
 	switch s[0] {
 	case '{':
 		return getJSONTheme(s)
