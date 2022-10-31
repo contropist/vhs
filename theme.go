@@ -5,7 +5,7 @@
 // It can be changed through the Set command.
 //
 // Set Theme {"background": "#171717"}
-// Set Theme TokyoNight-Storm
+// Set Theme "Catppuccin Mocha"
 package main
 
 import (

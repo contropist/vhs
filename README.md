@@ -310,13 +310,13 @@ Set Theme { "name": "Whimsy", "black": "#535178", "red": "#ef6487", "green": "#5
 
 <img alt="Example of changing the theme to Whimsy" src="https://stuff.charm.sh/vhs/examples/theme.gif" width="600" />
 
-You can also set some themes by their name:
+You can also set themes by name:
 
-- `Set Theme Catppuccin-Frappe`
-- `Set Theme Catppuccin-Latte`
-- `Set Theme Catppuccin-Macchiato`
-- `Set Theme Catppuccin-Mocha`
-- `Set Theme TokyoNight-Storm`
+```elixir
+Set Theme "Catppuccin Frappe"
+```
+
+See the full list by running `vhs man`.
 
 #### Set Padding
 
