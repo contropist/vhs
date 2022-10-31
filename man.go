@@ -69,7 +69,7 @@ func manThemes() string {
 	result := []string{
 		"Here's a list of all the themes you can use with %Set Theme%, one per line:\n",
 	}
-	for k := range Themes() {
+	for _, k := range SortedThemeNames() {
 		result = append(result, `* Set %Theme% "`+k+`"`)
 	}
 	return strings.Join(result, "\n") + "\n"

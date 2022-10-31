@@ -5,47 +5,68 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"sync"
 )
 
+//go:generate wget -O themes.json https://raw.githubusercontent.com/atomcorp/themes/master/app/src/backupthemes.json
+//go:generate wget -O themes_custom.json https://raw.githubusercontent.com/atomcorp/themes/master/app/src/custom-colour-schemes.json
 var (
 	//go:embed themes.json
-	themesBts  []byte
+	themesBts []byte
+
+	//go:embed themes_custom.json
+	customThemesBts []byte
+
 	themesOnce sync.Once
 	themesMap  = map[string]Theme{}
 )
+
+func SortedThemeNames() []string {
+	var keys []string
+	for k := range Themes() {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return strings.ToLower(keys[i]) < strings.ToLower(keys[j])
+	})
+	return keys
+}
 
 // Themes return the list of themes.
 func Themes() map[string]Theme {
 	themesOnce.Do(func() {
 		var themes []windowsTerminalTheme
-		if err := json.Unmarshal(themesBts, &themes); err != nil {
-			fmt.Fprintf(os.Stderr, "could not load themes.json: %s\n", err)
-			os.Exit(1)
-		}
-		for _, theme := range themes {
-			themesMap[theme.Name] = Theme{
-				Background:    theme.Background,
-				Foreground:    theme.Foreground,
-				Selection:     theme.SelectionBackground,
-				Cursor:        theme.CursorColor,
-				CursorAccent:  theme.CursorAccent,
-				Black:         theme.Black,
-				BrightBlack:   theme.BrightBlack,
-				Red:           theme.Red,
-				BrightRed:     theme.BrightRed,
-				Green:         theme.Green,
-				BrightGreen:   theme.BrightGreen,
-				Yellow:        theme.Yellow,
-				BrightYellow:  theme.BrightYellow,
-				Blue:          theme.Blue,
-				BrightBlue:    theme.BrightBlue,
-				Magenta:       theme.Purple,
-				BrightMagenta: theme.BrightPurple,
-				Cyan:          theme.Cyan,
-				BrightCyan:    theme.BrightCyan,
-				White:         theme.White,
-				BrightWhite:   theme.BrightWhite,
+		for _, bts := range [][]byte{themesBts, customThemesBts} {
+			if err := json.Unmarshal(bts, &themes); err != nil {
+				fmt.Fprintf(os.Stderr, "could not load themes.json: %s\n", err)
+				os.Exit(1)
+			}
+			for _, theme := range themes {
+				themesMap[theme.Name] = Theme{
+					Background:    theme.Background,
+					Foreground:    theme.Foreground,
+					Selection:     theme.SelectionBackground,
+					Cursor:        theme.CursorColor,
+					CursorAccent:  theme.CursorAccent,
+					Black:         theme.Black,
+					BrightBlack:   theme.BrightBlack,
+					Red:           theme.Red,
+					BrightRed:     theme.BrightRed,
+					Green:         theme.Green,
+					BrightGreen:   theme.BrightGreen,
+					Yellow:        theme.Yellow,
+					BrightYellow:  theme.BrightYellow,
+					Blue:          theme.Blue,
+					BrightBlue:    theme.BrightBlue,
+					Magenta:       theme.Purple,
+					BrightMagenta: theme.BrightPurple,
+					Cyan:          theme.Cyan,
+					BrightCyan:    theme.BrightCyan,
+					White:         theme.White,
+					BrightWhite:   theme.BrightWhite,
+				}
 			}
 		}
 	})
