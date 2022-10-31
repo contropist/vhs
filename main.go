@@ -163,7 +163,7 @@ func main() {
 
 func init() {
 	themesCmd.Flags().BoolVar(&md, "markdown", false, "output as markdown")
-	themesCmd.Flags().MarkHidden("markdown")
+	_ = themesCmd.Flags().MarkHidden("markdown")
 	rootCmd.AddCommand(
 		newCmd,
 		themesCmd,
