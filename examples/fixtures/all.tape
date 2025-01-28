@@ -6,6 +6,7 @@ Output examples/fixtures/all.mp4
 Output examples/fixtures/all.webm
 
 # Settings:
+Set Shell "fish"
 Set FontSize 22
 Set FontFamily "DejaVu Sans Mono"
 Set Height 600
@@ -20,6 +21,7 @@ Set PlaybackSpeed 2
 Set TypingSpeed .1
 Set LoopOffset 60.4
 Set LoopOffset 20.99%
+Set CursorBlink false
 
 # Sleep:
 Sleep 1
@@ -28,18 +30,32 @@ Sleep .5
 Sleep 0.5
 
 # Type:
-Type "All"
 Type@.5 "All"
 Type@500ms "All"
+Type "Double Quote"
+Type '"Single" Quote'
+Type `"Backtick" 'Quote'`
 
 # Keys:
 Backspace
 Backspace 2
 Backspace@1 3
 
+Delete
+Delete 2
+Delete@1 3
+
+Insert
+Insert 2
+Insert@1 3
+
 Down
 Down 2
 Down@1 3
+
+PageDown
+PageDown 2
+PageDown@1 3
 
 Enter
 Enter 2
@@ -65,6 +81,10 @@ Up
 Up 2
 Up@1 3
 
+PageUp
+PageUp 2
+PageUp@1 3
+
 Down
 Down 2
 Down@1 3
@@ -73,6 +93,11 @@ Down@1 3
 Ctrl+C
 Ctrl+L
 Ctrl+R
+
+# Alt:
+Alt+.
+Alt+L
+Alt+i
 
 # Display:
 Hide

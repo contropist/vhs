@@ -2,12 +2,15 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"strings"
+
+	"github.com/charmbracelet/vhs/lexer"
+	"github.com/charmbracelet/vhs/parser"
+	"github.com/charmbracelet/vhs/token"
+	"github.com/go-rod/rod"
 )
 
 // EvaluatorOption is a function that can be used to modify the VHS instance.
@@ -15,49 +18,75 @@ type EvaluatorOption func(*VHS)
 
 // Evaluate takes as input a tape string, an output writer, and an output file
 // and evaluates all the commands within the tape string and produces a GIF.
-func Evaluate(ctx context.Context, tape string, out io.Writer, opts ...EvaluatorOption) error {
-	l := NewLexer(tape)
-	p := NewParser(l)
+func Evaluate(ctx context.Context, tape string, out io.Writer, opts ...EvaluatorOption) []error {
+	l := lexer.New(tape)
+	p := parser.New(l)
 
 	cmds := p.Parse()
 	errs := p.Errors()
 	if len(errs) != 0 || len(cmds) == 0 {
-		lines := strings.Split(tape, "\n")
-		for _, err := range errs {
-			fmt.Fprint(out, LineNumber(err.Token.Line))
-			fmt.Fprintln(out, lines[err.Token.Line-1])
-			fmt.Fprint(out, strings.Repeat(" ", err.Token.Column+ErrorColumnOffset))
-			fmt.Fprintln(out, Underline(len(err.Token.Literal)), err.Msg)
-			fmt.Fprintln(out)
-		}
-		return errors.New("parse error")
+		return []error{InvalidSyntaxError{errs}}
 	}
 
 	v := New()
+	for _, cmd := range cmds {
+		if cmd.Type == token.SET && cmd.Options == "Shell" || cmd.Type == token.ENV {
+			err := Execute(cmd, &v)
+			if err != nil {
+				return []error{err}
+			}
+		}
+	}
+
+	// Start things up
+	if err := v.Start(); err != nil {
+		return []error{err}
+	}
 	defer func() { _ = v.close() }()
 
-	// Run Output and Set commands as they only modify options on the VHS instance.
+	// Let's wait until we can access the window.term variable.
+	//
+	// This is necessary because some SET commands modify the terminal.
+	err := v.Page.Wait(rod.Eval("() => window.term != undefined"))
+	if err != nil {
+		return []error{err}
+	}
+
 	var offset int
 	for i, cmd := range cmds {
-		if cmd.Type == SET || cmd.Type == OUTPUT || cmd.Type == REQUIRE {
-			fmt.Fprintln(out, cmd.Highlight(false))
-			cmd.Execute(&v)
+		if cmd.Type == token.SET || cmd.Type == token.OUTPUT || cmd.Type == token.REQUIRE {
+			_, _ = fmt.Fprintln(out, Highlight(cmd, false))
+			if cmd.Options != "Shell" {
+				err := Execute(cmd, &v)
+				if err != nil {
+					return []error{err}
+				}
+			}
 		} else {
 			offset = i
 			break
 		}
 	}
 
+	// Make sure image is big enough to fit padding, bar, and margins
 	video := v.Options.Video
-	if video.Height < 2*video.Padding || video.Width < 2*video.Padding {
-		v.Errors = append(v.Errors, fmt.Errorf("height and width must be greater than %d", 2*video.Padding))
+	minWidth := double(video.Style.Padding) + double(video.Style.Margin)
+	minHeight := double(video.Style.Padding) + double(video.Style.Margin)
+	if video.Style.WindowBar != "" {
+		minHeight += video.Style.WindowBarSize
+	}
+	if video.Style.Height < minHeight || video.Style.Width < minWidth {
+		v.Errors = append(
+			v.Errors,
+			fmt.Errorf(
+				"Dimensions must be at least %d x %d",
+				minWidth, minHeight,
+			),
+		)
 	}
 
 	if len(v.Errors) > 0 {
-		for _, err := range v.Errors {
-			fmt.Fprintln(out, ErrorStyle.Render(err.Error()))
-		}
-		os.Exit(1)
+		return v.Errors
 	}
 
 	// Setup the terminal session so we can start executing commands.
@@ -66,14 +95,17 @@ func Evaluate(ctx context.Context, tape string, out io.Writer, opts ...Evaluator
 	// If the first command (after Settings and Outputs) is a Hide command, we can
 	// begin executing the commands before we start recording to avoid capturing
 	// any unwanted frames.
-	if cmds[offset].Type == HIDE {
+	if cmds[offset].Type == token.HIDE {
 		for i, cmd := range cmds[offset:] {
-			if cmd.Type == SHOW {
+			if cmd.Type == token.SHOW {
 				offset += i
 				break
 			}
-			fmt.Fprintln(out, cmd.Highlight(true))
-			cmd.Execute(&v)
+			_, _ = fmt.Fprintln(out, Highlight(cmd, true))
+			err := Execute(cmd, &v)
+			if err != nil {
+				return []error{err}
+			}
 		}
 	}
 
@@ -82,7 +114,14 @@ func Evaluate(ctx context.Context, tape string, out io.Writer, opts ...Evaluator
 	ch := v.Record(ctx)
 
 	// Clean up temporary files at the end.
-	defer func() { _ = v.Cleanup() }()
+	defer func() {
+		if v.Options.Video.Output.Frames != "" {
+			// Move the frames to the output directory.
+			_ = os.Rename(v.Options.Video.Input, v.Options.Video.Output.Frames)
+		}
+
+		_ = v.Cleanup()
+	}()
 
 	teardown := func() {
 		// Stop recording frames.
@@ -101,7 +140,7 @@ func Evaluate(ctx context.Context, tape string, out io.Writer, opts ...Evaluator
 	for _, cmd := range cmds[offset:] {
 		if ctx.Err() != nil {
 			teardown()
-			return ctx.Err()
+			return []error{ctx.Err()}
 		}
 
 		// When changing the FontFamily, FontSize, LineHeight, Padding
@@ -112,13 +151,21 @@ func Evaluate(ctx context.Context, tape string, out io.Writer, opts ...Evaluator
 		// GIF as the frame sequence will change dimensions. This is fixable.
 		//
 		// We should remove if isSetting statement.
-		isSetting := cmd.Type == SET && cmd.Options != "TypingSpeed"
-		if isSetting || cmd.Type == REQUIRE {
-			fmt.Fprintln(out, cmd.Highlight(true))
+		isSetting := cmd.Type == token.SET && cmd.Options != "TypingSpeed"
+
+		if isSetting {
+			fmt.Println(ErrorStyle.Render(fmt.Sprintf("WARN: 'Set %s %s' has been ignored. Move the directive to the top of the file.\nLearn more: https://github.com/charmbracelet/vhs#settings", cmd.Options, cmd.Args)))
+		}
+		if isSetting || cmd.Type == token.REQUIRE {
+			_, _ = fmt.Fprintln(out, Highlight(cmd, true))
 			continue
 		}
-		fmt.Fprintln(out, cmd.Highlight(!v.recording || cmd.Type == SHOW || cmd.Type == HIDE || isSetting))
-		cmd.Execute(&v)
+		_, _ = fmt.Fprintln(out, Highlight(cmd, !v.recording || cmd.Type == token.SHOW || cmd.Type == token.HIDE || isSetting))
+		err := Execute(cmd, &v)
+		if err != nil {
+			teardown()
+			return []error{err}
+		}
 	}
 
 	// If running as an SSH server, the output file is a temporary file
@@ -134,5 +181,8 @@ func Evaluate(ctx context.Context, tape string, out io.Writer, opts ...Evaluator
 	}
 
 	teardown()
-	return v.Render()
+	if err := v.Render(); err != nil {
+		return []error{err}
+	}
+	return nil
 }
