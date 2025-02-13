@@ -13,10 +13,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/caarlos0/env/v6"
+	"github.com/caarlos0/env/v11"
+	"github.com/charmbracelet/ssh"
 	"github.com/charmbracelet/wish"
 	"github.com/charmbracelet/wish/logging"
-	"github.com/gliderlabs/ssh"
 	"github.com/spf13/cobra"
 )
 
@@ -37,9 +37,9 @@ type config struct {
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the VHS SSH server",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		var cfg config
-		if err := env.Parse(&cfg, env.Options{
+		if err := env.ParseWithOptions(&cfg, env.Options{
 			Prefix: "VHS_",
 		}); err != nil {
 			return err
@@ -90,21 +90,33 @@ var serveCmd = &cobra.Command{
 
 						//nolint:gosec
 						rand := rand.Int63n(maxNumber)
-						tempFile := filepath.Join(os.TempDir(), fmt.Sprintf("vhs-%d.gif", rand))
-
-						err = Evaluate(cmd.Context(), b.String(), s.Stderr(), func(v *VHS) {
-							v.Options.Video.Output.GIF = tempFile
-							// Disable generating MP4 & WebM.
-							v.Options.Video.Output.MP4 = ""
-							v.Options.Video.Output.WebM = ""
+						tempFile := filepath.Join(os.TempDir(), fmt.Sprintf("vhs-%d", rand))
+						defer func() { _ = os.Remove(tempFile) }()
+						errs := Evaluate(s.Context(), b.String(), s.Stderr(), func(v *VHS) {
+							var gifOutput, mp4Output, webmOutput string
+							switch {
+							case v.Options.Video.Output.MP4 != "":
+								tempFile += mp4
+								mp4Output = tempFile
+							case v.Options.Video.Output.WebM != "":
+								tempFile += webm
+								webmOutput = tempFile
+							default:
+								tempFile += gif
+								gifOutput = tempFile
+							}
+							v.Options.Video.Output.GIF = gifOutput
+							v.Options.Video.Output.MP4 = mp4Output
+							v.Options.Video.Output.WebM = webmOutput
 						})
-						if err != nil {
+
+						if len(errs) > 0 {
+							printErrors(s.Stderr(), b.String(), errs)
 							_ = s.Exit(1)
 						}
 
 						gif, _ := os.ReadFile(tempFile)
 						wish.Print(s, string(gif))
-						_ = os.Remove(tempFile)
 
 						h(s)
 					}
@@ -113,31 +125,40 @@ var serveCmd = &cobra.Command{
 			),
 		)
 		if err != nil {
-			log.Fatalln(err)
+			return err
 		}
 
+		// listen
 		log.Printf("Starting SSH server on %s", addr)
+		ls, err := net.Listen("tcp", addr)
+		if err != nil {
+			return fmt.Errorf("failed to listen on %s: %w", addr, err)
+		}
+
+		// drop privileges
+		gid, uid := cfg.GID, cfg.UID
+		if gid != 0 && uid != 0 {
+			log.Printf("Starting server with GID: %d, UID: %d", gid, uid)
+			if err := dropUserPrivileges(gid, uid); err != nil {
+				return err
+			}
+		}
+
+		sch := make(chan error)
 		go func() {
-			ls, err := net.Listen("tcp", addr)
-			if err != nil {
-				log.Fatalf("Failed to listen on %s: %v", addr, err)
-			}
-			gid, uid := cfg.GID, cfg.UID
-			if gid != 0 && uid != 0 {
-				log.Printf("Starting server with GID: %d, UID: %d", gid, uid)
-				if err := dropUserPrivileges(gid, uid); err != nil {
-					log.Fatalln(err)
-				}
-			}
-			if err = s.Serve(ls); err != nil {
-				log.Fatalln(err)
-			}
+			defer close(sch)
+			sch <- s.Serve(ls)
 		}()
 
 		<-cmd.Context().Done()
 		log.Println("Stopping SSH server")
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)
-		defer func() { cancel() }()
-		return s.Shutdown(ctx)
+		defer cancel()
+		if err := s.Shutdown(ctx); err != nil {
+			return err
+		}
+
+		// wait for serve to finish
+		return <-sch
 	},
 }

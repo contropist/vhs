@@ -12,6 +12,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 )
 
@@ -22,19 +23,25 @@ func randomPort() int {
 	return addr.Addr().(*net.TCPAddr).Port
 }
 
-// StartTTY starts the ttyd process on the given port.
-func StartTTY(port int) *exec.Cmd {
+// buildTtyCmd builds the ttyd exec.Command on the given port.
+func buildTtyCmd(port int, shell Shell) *exec.Cmd {
 	args := []string{
 		fmt.Sprintf("--port=%d", port),
+		"--interface", "127.0.0.1",
 		"-t", "rendererType=canvas",
 		"-t", "disableResizeOverlay=true",
-		"-t", "cursorBlink=true",
+		"-t", "enableSixel=true",
 		"-t", "customGlyphs=true",
+		"--once", // will allow one connection and exit
+		"--writable",
 	}
 
-	args = append(args, defaultShellWithArgs()...)
+	args = append(args, shell.Command...)
 
 	//nolint:gosec
 	cmd := exec.Command("ttyd", args...)
+	if shell.Env != nil {
+		cmd.Env = append(shell.Env, os.Environ()...)
+	}
 	return cmd
 }

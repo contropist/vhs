@@ -7,3 +7,5 @@ manpages
 completions
 dist
 vhs
+.idea/
+.vscode/

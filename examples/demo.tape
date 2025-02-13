@@ -20,6 +20,12 @@
 #   Set Padding <number>            Set the padding of the terminal
 #   Set Framerate <number>          Set the framerate of the recording
 #   Set PlaybackSpeed <float>       Set the playback speed of the recording
+#   Set MarginFill <file|#000000>   Set the file or color the margin will be filled with.
+#   Set Margin <number>             Set the size of the margin. Has no effect if MarginFill isn't set.
+#   Set BorderRadius <number>       Set terminal border radius, in pixels.
+#   Set WindowBar <string>          Set window bar type. (one of: Rings, RingsRight, Colorful, ColorfulRight)
+#   Set WindowBarSize <number>      Set window bar size, in pixels. Default is 40.
+#   Set TypingSpeed <time>          Set the typing speed of the terminal. Default is 50ms.
 #
 # Sleep:
 #   Sleep <time>                    Sleep for a set amount of <time> in seconds
@@ -29,7 +35,10 @@
 #                                   <time> delay between each character
 #
 # Keys:
+#   Escape[@<time>] [number]        Press the Escape key
 #   Backspace[@<time>] [number]     Press the Backspace key
+#   Delete[@<time>] [number]        Press the Delete key
+#   Insert[@<time>] [number]        Press the Insert key
 #   Down[@<time>] [number]          Press the Down key
 #   Enter[@<time>] [number]         Press the Enter key
 #   Space[@<time>] [number]         Press the Space key
@@ -38,6 +47,8 @@
 #   Right[@<time>] [number]         Press the Right Arrow key
 #   Up[@<time>] [number]            Press the Up Arrow key
 #   Down[@<time>] [number]          Press the Down Arrow key
+#   PageUp[@<time>] [number]        Press the Page Up key
+#   PageDown[@<time>] [number]      Press the Page Down key
 #   Ctrl+<key>                      Press the Control key + <key> (e.g. Ctrl+C)
 #
 # Display:
@@ -48,10 +59,10 @@ Output examples/demo.gif
 
 Require echo
 
+Set Shell "bash"
 Set FontSize 32
 Set Width 1200
 Set Height 600
-Set LoopOffset 50%
 
 Type "echo 'Welcome to VHS!'" Sleep 500ms  Enter
 
