@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -28,27 +29,63 @@ var (
 )
 
 // SaveOutput saves the current buffer to the output file.
-func (v *VHS) SaveOutput() {
+func (v *VHS) SaveOutput() error {
+	var err error
 	// Create output file (once)
 	once.Do(func() {
-		err := os.MkdirAll(filepath.Dir(v.Options.Test.Output), os.ModePerm)
+		err = os.MkdirAll(filepath.Dir(v.Options.Test.Output), os.ModePerm)
 		if err != nil {
-			file, _ = os.CreateTemp(os.TempDir(), "vhs-*.txt")
+			file, err = os.CreateTemp(os.TempDir(), "vhs-*.txt")
 			return
 		}
-		file, _ = os.Create(v.Options.Test.Output)
+		file, err = os.Create(v.Options.Test.Output)
 	})
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
 
+	lines, err := v.Buffer()
+	if err != nil {
+		return fmt.Errorf("failed to get buffer: %w", err)
+	}
+
+	for _, line := range lines {
+		_, err = file.WriteString(line + "\n")
+		if err != nil {
+			return fmt.Errorf("failed to write buffer to file: %w", err)
+		}
+	}
+
+	_, err = file.WriteString(separator + "\n")
+	if err != nil {
+		return fmt.Errorf("failed to write separator to file: %w", err)
+	}
+
+	return nil
+}
+
+// Buffer returns the current buffer.
+func (v *VHS) Buffer() ([]string, error) {
 	// Get the current buffer.
 	buf, err := v.Page.Eval("() => Array(term.rows).fill(0).map((e, i) => term.buffer.active.getLine(i).translateToString().trimEnd())")
 	if err != nil {
-		return
+		return nil, fmt.Errorf("read buffer: %w", err)
 	}
 
+	var lines []string
 	for _, line := range buf.Value.Arr() {
-		str := line.Str()
-		_, _ = file.WriteString(str + "\n")
+		lines = append(lines, line.Str())
 	}
 
-	_, _ = file.WriteString(separator + "\n")
+	return lines, nil
+}
+
+// CurrentLine returns the current line from the buffer.
+func (v *VHS) CurrentLine() (string, error) {
+	buf, err := v.Page.Eval("() => term.buffer.active.getLine(term.buffer.active.cursorY+term.buffer.active.viewportY).translateToString().trimEnd()")
+	if err != nil {
+		return "", fmt.Errorf("read current line from buffer: %w", err)
+	}
+
+	return buf.Value.Str(), nil
 }

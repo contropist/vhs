@@ -2,17 +2,21 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/input"
 	"github.com/go-rod/rod/lib/launcher"
+	"github.com/go-rod/rod/lib/proto"
 )
 
 // VHS is the object that controls the setup.
@@ -24,6 +28,7 @@ type VHS struct {
 	TextCanvas   *rod.Element
 	CursorCanvas *rod.Element
 	mutex        *sync.Mutex
+	started      bool
 	recording    bool
 	tty          *exec.Cmd
 	totalFrames  int
@@ -32,60 +37,122 @@ type VHS struct {
 
 // Options is the set of options for the setup.
 type Options struct {
+	Shell         Shell
 	FontFamily    string
 	FontSize      int
 	LetterSpacing float64
 	LineHeight    float64
-	Prompt        string
 	TypingSpeed   time.Duration
 	Theme         Theme
 	Test          TestOptions
 	Video         VideoOptions
 	LoopOffset    float64
+	WaitTimeout   time.Duration
+	WaitPattern   *regexp.Regexp
+	CursorBlink   bool
+	Screenshot    ScreenshotOptions
+	Style         StyleOptions
 }
 
 const (
-	defaultFontSize = 22
-	typingSpeed     = 50 * time.Millisecond
+	defaultFontSize      = 22
+	defaultTypingSpeed   = 50 * time.Millisecond
+	defaultLineHeight    = 1.0
+	defaultLetterSpacing = 1.0
+	fontsSeparator       = ","
+	defaultCursorBlink   = true
+	defaultWaitTimeout   = 15 * time.Second
 )
+
+var defaultWaitPattern = regexp.MustCompile(">$")
+
+var defaultFontFamily = withSymbolsFallback(strings.Join([]string{
+	"JetBrains Mono",
+	"DejaVu Sans Mono",
+	"Menlo",
+	"Bitstream Vera Sans Mono",
+	"Inconsolata",
+	"Roboto Mono",
+	"Hack",
+	"Consolas",
+	"ui-monospace",
+	"monospace",
+}, fontsSeparator))
+
+var symbolsFallback = []string{
+	"Apple Symbols",
+}
+
+func withSymbolsFallback(font string) string {
+	return font + fontsSeparator + strings.Join(symbolsFallback, fontsSeparator)
+}
 
 // DefaultVHSOptions returns the default set of options to use for the setup function.
 func DefaultVHSOptions() Options {
+	style := DefaultStyleOptions()
+	video := DefaultVideoOptions()
+	video.Style = style
+	screenshot := NewScreenshotOptions(video.Input, style)
+
 	return Options{
-		Prompt:        "\\[\\e[38;2;90;86;224m\\]> \\[\\e[0m\\]",
-		FontFamily:    "JetBrains Mono,DejaVu Sans Mono,Menlo,Bitstream Vera Sans Mono,Inconsolata,Roboto Mono,Hack,Consolas,ui-monospace,monospace",
+		FontFamily:    defaultFontFamily,
 		FontSize:      defaultFontSize,
-		LetterSpacing: 0,
-		LineHeight:    1.0,
-		TypingSpeed:   typingSpeed,
+		LetterSpacing: defaultLetterSpacing,
+		LineHeight:    defaultLineHeight,
+		TypingSpeed:   defaultTypingSpeed,
+		Shell:         Shells[defaultShell],
 		Theme:         DefaultTheme,
-		Video:         DefaultVideoOptions(),
+		CursorBlink:   defaultCursorBlink,
+		Video:         video,
+		Screenshot:    screenshot,
+		WaitTimeout:   defaultWaitTimeout,
+		WaitPattern:   defaultWaitPattern,
 	}
 }
 
 // New sets up ttyd and go-rod for recording frames.
 func New() VHS {
-	port := randomPort()
-	tty := StartTTY(port)
-	go tty.Run() //nolint:errcheck
-
-	opts := DefaultVHSOptions()
-	path, _ := launcher.LookPath()
-	u := launcher.New().Leakless(false).Bin(path).MustLaunch()
-	browser := rod.New().ControlURL(u).MustConnect()
-	page := browser.MustPage(fmt.Sprintf("http://localhost:%d", port))
-
 	mu := &sync.Mutex{}
-
+	opts := DefaultVHSOptions()
 	return VHS{
 		Options:   &opts,
-		Page:      page,
-		browser:   browser,
-		tty:       tty,
 		recording: true,
 		mutex:     mu,
-		close:     browser.Close,
 	}
+}
+
+// Start starts ttyd, browser and everything else needed to create the gif.
+func (vhs *VHS) Start() error {
+	vhs.mutex.Lock()
+	defer vhs.mutex.Unlock()
+
+	if vhs.started {
+		return fmt.Errorf("vhs is already started")
+	}
+
+	port := randomPort()
+	vhs.tty = buildTtyCmd(port, vhs.Options.Shell)
+	if err := vhs.tty.Start(); err != nil {
+		return fmt.Errorf("could not start tty: %w", err)
+	}
+
+	path, _ := launcher.LookPath()
+	enableNoSandbox := os.Getenv("VHS_NO_SANDBOX") != ""
+	u, err := launcher.New().Leakless(false).Bin(path).NoSandbox(enableNoSandbox).Launch()
+	if err != nil {
+		return fmt.Errorf("could not launch browser: %w", err)
+	}
+	browser := rod.New().ControlURL(u).MustConnect()
+	page, err := browser.Page(proto.TargetCreateTarget{URL: fmt.Sprintf("http://localhost:%d", port)})
+	if err != nil {
+		return fmt.Errorf("could not open ttyd: %w", err)
+	}
+
+	vhs.browser = browser
+	vhs.Page = page
+	vhs.close = vhs.browser.Close
+	vhs.started = true
+	return nil
 }
 
 // Setup sets up the VHS instance and performs the necessary actions to reflect
@@ -93,28 +160,28 @@ func New() VHS {
 func (vhs *VHS) Setup() {
 	// Set Viewport to the correct size, accounting for the padding that will be
 	// added during the render.
-	padding := vhs.Options.Video.Padding
-	width := vhs.Options.Video.Width - padding - padding
-	height := vhs.Options.Video.Height - padding - padding
+	padding := vhs.Options.Video.Style.Padding
+	margin := 0
+	if vhs.Options.Video.Style.MarginFill != "" {
+		margin = vhs.Options.Video.Style.Margin
+	}
+	bar := 0
+	if vhs.Options.Video.Style.WindowBar != "" {
+		bar = vhs.Options.Video.Style.WindowBarSize
+	}
+	width := vhs.Options.Video.Style.Width - double(padding) - double(margin)
+	height := vhs.Options.Video.Style.Height - double(padding) - double(margin) - bar
 	vhs.Page = vhs.Page.MustSetViewport(width, height, 0, false)
-
-	// Let's wait until we can access the window.term variable.
-	vhs.Page = vhs.Page.MustWait("() => window.term != undefined")
 
 	// Find xterm.js canvases for the text and cursor layer for recording.
 	vhs.TextCanvas, _ = vhs.Page.Element("canvas.xterm-text-layer")
 	vhs.CursorCanvas, _ = vhs.Page.Element("canvas.xterm-cursor-layer")
 
-	// Set Prompt
-	vhs.Page.MustElement("textarea").
-		MustInput(fmt.Sprintf(` set +o history; unset PROMPT_COMMAND; export PS1="%s"; clear;`, vhs.Options.Prompt)).
-		MustType(input.Enter)
-
 	// Apply options to the terminal
 	// By this point the setting commands have been executed, so the `opts` struct is up to date.
-	vhs.Page.MustEval(fmt.Sprintf("() => { term.options = { fontSize: %d, fontFamily: '%s', letterSpacing: %f, lineHeight: %f, theme: %s } }",
+	vhs.Page.MustEval(fmt.Sprintf("() => { term.options = { fontSize: %d, fontFamily: '%s', letterSpacing: %f, lineHeight: %f, theme: %s, cursorBlink: %t } }",
 		vhs.Options.FontSize, vhs.Options.FontFamily, vhs.Options.LetterSpacing,
-		vhs.Options.LineHeight, vhs.Options.Theme.String()))
+		vhs.Options.LineHeight, vhs.Options.Theme.String(), vhs.Options.CursorBlink))
 
 	// Fit the terminal into the window
 	vhs.Page.MustEval("term.fit")
@@ -141,11 +208,11 @@ func (vhs *VHS) terminate() error {
 
 // Cleanup individual frames.
 func (vhs *VHS) Cleanup() error {
-	if !vhs.Options.Video.CleanupFrames {
-		return nil
+	err := os.RemoveAll(vhs.Options.Video.Input)
+	if err != nil {
+		return err
 	}
-
-	return os.RemoveAll(vhs.Options.Video.Input)
+	return os.RemoveAll(vhs.Options.Screenshot.input)
 }
 
 // Render starts rendering the individual frames into a video.
@@ -160,6 +227,7 @@ func (vhs *VHS) Render() error {
 	cmds = append(cmds, MakeGIF(vhs.Options.Video))
 	cmds = append(cmds, MakeMP4(vhs.Options.Video))
 	cmds = append(cmds, MakeWebM(vhs.Options.Video))
+	cmds = append(cmds, MakeScreenshots(vhs.Options.Screenshot)...)
 
 	for _, cmd := range cmds {
 		if cmd == nil {
@@ -167,15 +235,19 @@ func (vhs *VHS) Render() error {
 		}
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			fmt.Println(string(out))
+			log.Println(string(out))
 		}
 	}
 
 	return nil
 }
 
-// Apply Loop Offset by modifying frame sequence
+// ApplyLoopOffset by modifying frame sequence
 func (vhs *VHS) ApplyLoopOffset() error {
+	if vhs.totalFrames <= 0 {
+		return errors.New("no frames")
+	}
+
 	loopOffsetPercentage := vhs.Options.LoopOffset
 
 	// Calculate # of frames to offset from LoopOffset percentage
@@ -241,7 +313,7 @@ func (vhs *VHS) ApplyLoopOffset() error {
 	}
 }
 
-const quality = 0.92
+const quality = 1.0
 
 // Record begins the goroutine which captures images from the xterm.js canvases.
 func (vhs *VHS) Record(ctx context.Context) <-chan error {
@@ -285,7 +357,7 @@ func (vhs *VHS) Record(ctx context.Context) <-chan error {
 				if err := os.WriteFile(
 					filepath.Join(vhs.Options.Video.Input, fmt.Sprintf(cursorFrameFormat, counter)),
 					cursor,
-					os.ModePerm,
+					0o600,
 				); err != nil {
 					ch <- fmt.Errorf("error writing cursor frame: %w", err)
 					continue
@@ -293,10 +365,15 @@ func (vhs *VHS) Record(ctx context.Context) <-chan error {
 				if err := os.WriteFile(
 					filepath.Join(vhs.Options.Video.Input, fmt.Sprintf(textFrameFormat, counter)),
 					text,
-					os.ModePerm,
+					0o600,
 				); err != nil {
 					ch <- fmt.Errorf("error writing text frame: %w", err)
 					continue
+				}
+
+				// Capture current frame and disable frame capturing
+				if vhs.Options.Screenshot.frameCapture {
+					vhs.Options.Screenshot.makeScreenshot(counter)
 				}
 			}
 		}
@@ -319,4 +396,12 @@ func (vhs *VHS) PauseRecording() {
 	defer vhs.mutex.Unlock()
 
 	vhs.recording = false
+}
+
+// ScreenshotNextFrame indicates to VHS that screenshot of next frame must be taken.
+func (vhs *VHS) ScreenshotNextFrame(path string) {
+	vhs.mutex.Lock()
+	defer vhs.mutex.Unlock()
+
+	vhs.Options.Screenshot.enableFrameCapture(path)
 }

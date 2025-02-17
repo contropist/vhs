@@ -3,16 +3,19 @@ package main
 import (
 	"reflect"
 	"testing"
+
+	"github.com/charmbracelet/vhs/parser"
 )
 
 func TestCommand(t *testing.T) {
-	const numberOfCommands = 18
-	if len(CommandTypes) != numberOfCommands {
-		t.Errorf("Expected %d commands, got %d", numberOfCommands, len(CommandTypes))
+	const numberOfCommands = 29
+	if len(parser.CommandTypes) != numberOfCommands {
+		t.Errorf("Expected %d commands, got %d", numberOfCommands, len(parser.CommandTypes))
 	}
 
-	if len(CommandFuncs) != numberOfCommands {
-		t.Errorf("Expected %d commands, got %d", numberOfCommands, len(CommandTypes))
+	const numberOfCommandFuncs = 29
+	if len(CommandFuncs) != numberOfCommandFuncs {
+		t.Errorf("Expected %d commands, got %d", numberOfCommandFuncs, len(CommandFuncs))
 	}
 }
 

@@ -3,8 +3,4 @@
 
 package main
 
-func defaultShellWithArgs() []string {
-	return []string{
-		"bash", "--login",
-	}
-}
+const defaultShell = bash

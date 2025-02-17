@@ -1,6 +1,8 @@
 package main
 
-import "github.com/charmbracelet/lipgloss"
+import (
+	"github.com/charmbracelet/lipgloss"
+)
 
 // Theme colors.
 const (
@@ -25,7 +27,15 @@ const (
 	Indigo        = "#5B56E0"
 )
 
-const defaultColumns = 80
+const (
+	defaultColumns       = 80
+	defaultHeight        = 600
+	defaultMaxColors     = 256
+	defaultPadding       = 60
+	defaultWindowBarSize = 30
+	defaultPlaybackSpeed = 1.0
+	defaultWidth         = 1200
+)
 
 // Styles for syntax highlighting
 var (
@@ -33,12 +43,13 @@ var (
 	FaintStyle      = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "242", Dark: "238"})
 	NoneStyle       = lipgloss.NewStyle()
 	KeywordStyle    = lipgloss.NewStyle()
+	URLStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 	NumberStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("3"))
 	StringStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
 	TimeStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("11"))
 	LineNumberStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 	ErrorStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("1"))
-	FileStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
+	GrayStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("8"))
 	ErrorFileStyle  = lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("8")).
@@ -46,3 +57,33 @@ var (
 			Padding(0, 1).
 			Width(defaultColumns)
 )
+
+// StyleOptions represents the ui options for video and screenshots.
+type StyleOptions struct {
+	Width           int
+	Height          int
+	Padding         int
+	BackgroundColor string
+	MarginFill      string
+	Margin          int
+	WindowBar       string
+	WindowBarSize   int
+	WindowBarColor  string
+	BorderRadius    int
+}
+
+// DefaultStyleOptions returns default Style config.
+func DefaultStyleOptions() *StyleOptions {
+	return &StyleOptions{
+		Width:           defaultWidth,
+		Height:          defaultHeight,
+		Padding:         defaultPadding,
+		MarginFill:      DefaultTheme.Background,
+		Margin:          0,
+		WindowBar:       "",
+		WindowBarSize:   defaultWindowBarSize,
+		WindowBarColor:  DefaultTheme.Background,
+		BorderRadius:    0,
+		BackgroundColor: DefaultTheme.Background,
+	}
+}

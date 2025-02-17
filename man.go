@@ -18,7 +18,7 @@ import (
 const specialChar = "%"
 
 var (
-	manDescription = `VHS let's you write terminal GIFs as code.
+	manDescription = `VHS lets you write terminal GIFs as code.
 VHS reads .tape files and renders GIFs (videos).
 A tape file is a script made up of commands describing what actions to perform in the render.
 
@@ -29,16 +29,28 @@ The following is a list of all possible commands in VHS:
 * %Set% <setting> <value>
 * %Sleep% <time>
 * %Type% "<string>"
-* %Ctrl%+<key>
+* %Ctrl% [+Alt][+Shift]+<char>
 * %Backspace% [repeat]
+* %Delete% [repeat]
+* %Insert% [repeat]
 * %Down% [repeat]
 * %Enter% [repeat]
 * %Left% [repeat]
 * %Right% [repeat]
 * %Tab% [repeat]
 * %Up% [repeat]
+* %PageUp% [repeat]
+* %PageDown% [repeat]
 * %Hide%
 * %Show%
+* %Wait%[+Screen][@<timeout>] /<regexp>/
+* %Escape%
+* %Alt%+<key>
+* %Space% [repeat]
+* %Source% <path>.tape
+* %Screenshot% <path>.png
+* %Copy% "<string>"
+* %Paste%
 `
 
 	manOutput = `The Output command instructs VHS where to save the output of the recording.
@@ -49,6 +61,7 @@ File names with the extension %.gif%, %.webm%, %.mp4% will have the respective f
 
 The following is a list of all possible setting commands in VHS:
 
+* Set %Shell% <string>
 * Set %FontSize% <number>
 * Set %FontFamily% <string>
 * Set %Height% <number>
@@ -60,6 +73,8 @@ The following is a list of all possible setting commands in VHS:
 * Set %Padding% <number>
 * Set %Framerate% <number>
 * Set %PlaybackSpeed% <float>
+* Set %WaitTimeout% <time>
+* Set %WaitPattern% <regexp>
 `
 	manBugs = "See GitHub Issues: <https://github.com/charmbracelet/vhs/issues>"
 
@@ -72,7 +87,7 @@ var manCmd = &cobra.Command{
 	Short:   "Generate man pages",
 	Args:    cobra.NoArgs,
 	Hidden:  true,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		if isatty.IsTerminal(os.Stdout.Fd()) {
 			renderer, err := glamour.NewTermRenderer(
 				glamour.WithStyles(GlamourTheme),
